@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luxe Nails</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: { colors: { brand: { 50: '#FDF2F8', 100: '#FCE7F3', 400: '#FB7185', 500: '#F43F5E', 900: '#4C1D95' } } },
+                fontFamily: { sans: ['Inter', 'sans-serif'] }
+            }
+        }
+    </script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        * { transition: all 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-brand-50 text-gray-800 font-sans antialiased min-h-screen">
+    <div id="app" class="max-w-md mx-auto bg-brand-50 min-h-screen relative shadow-2xl overflow-hidden">
+
+        <!-- VIEW 1: AUTH -->
+        <div id="view-auth" class="view-section hidden flex flex-col items-center justify-center min-h-screen px-6">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Luxe Nails</h1>
+            <p class="text-gray-500 mb-8 text-center">Enter your mobile number to sign in.</p>
+            <div class="w-full bg-white p-6 rounded-3xl shadow-sm border border-brand-100">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Mobile Number</label>
+                <input type="tel" id="auth-phone" placeholder="e.g. 1111111111" class="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-200 focus:outline-none focus:border-brand-400 mb-4">
+                
+                <div id="auth-password-container" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Staff Password</label>
+                    <input type="password" id="auth-password" placeholder="Enter password" class="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-200 focus:outline-none focus:border-brand-400 mb-4">
+                </div>
+
+                <div id="auth-name-container" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input type="text" id="auth-name" placeholder="Enter your full name" class="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-200 focus:outline-none focus:border-brand-400 mb-4">
+                </div>
+
+                <button onclick="handleAuth()" class="w-full bg-brand-400 hover:bg-brand-500 text-white font-semibold py-3 rounded-full shadow-md">Continue</button>
+            </div>
+        </div>
+
+        <!-- VIEW 2: CLIENT DASHBOARD -->
+        <div id="view-client-dashboard" class="view-section hidden px-6 pt-12">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-900" id="dash-welcome">Welcome!</h2>
+                <button onclick="logout()" class="text-sm text-gray-400">Logout</button>
+            </div>
+            <div id="active-booking-card" class="hidden bg-white p-6 rounded-3xl shadow-md border-2 border-brand-100 mb-8">
+                <h3 class="text-sm uppercase tracking-widest text-brand-400 font-bold mb-4">Your Appointment</h3>
+                <p class="text-2xl font-bold text-gray-900" id="active-date-time">Loading...</p>
+                <p class="text-gray-700 font-bold mt-2" id="active-service"></p>
+                <p class="text-gray-500 text-sm mt-1 mb-4">Nail Tech: <span id="active-stylist" class="font-bold text-gray-800"></span></p>
+                <div class="mb-6 p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-500">Status:</span>
+                    <span id="active-status" class="px-3 py-1 text-sm font-bold rounded-full uppercase"></span>
+                </div>
+                <button onclick="cancelAppointment()" class="w-full py-3 text-sm text-red-600 bg-red-50 rounded-2xl hover:bg-red-100 font-bold">Cancel Appointment</button>
+            </div>
+            <button id="btn-book-nav" onclick="loadServicesForBooking()" class="w-full bg-brand-400 hover:bg-brand-500 text-white text-xl font-bold py-5 rounded-[2rem] shadow-xl">Book Appointment</button>
+        </div>
+
+        <!-- VIEW 3: SERVICE SELECTION (NEW!) -->
+        <div id="view-services" class="view-section hidden px-6 pt-12 pb-20">
+            <button onclick="showView('view-client-dashboard')" class="text-gray-400 mb-6 flex items-center gap-2">❮ Back</button>
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Select Service</h2>
+            <div id="service-list" class="space-y-4"></div>
+        </div>
+
+        <!-- VIEW 4: STYLIST SELECTION -->
+        <div id="view-stylists" class="view-section hidden px-6 pt-12 pb-20">
+            <button onclick="showView('view-services')" class="text-gray-400 mb-6 flex items-center gap-2">❮ Back</button>
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">Choose Stylist</h2>
+            <p class="text-gray-500 mb-6 text-sm" id="stylist-service-label">For: Service Name</p>
+            <div id="stylist-list" class="space-y-4"></div>
+        </div>
+
+        <!-- VIEW 5: THE CALENDAR ENGINE -->
+        <div id="view-booking" class="view-section hidden px-6 pt-12 flex flex-col h-screen">
+            <button id="btn-back-calendar" class="text-gray-400 mb-4 flex items-center gap-2">❮ Back</button>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Select Date & Time</h2>
+            <p class="text-gray-500 mb-6 text-sm" id="booking-stylist-name"></p>
+            
+            <div class="relative mb-4 border-b border-brand-100 pb-4">
+                <button onclick="document.getElementById('date-slider').scrollBy({left: -150, behavior: 'smooth'})" class="absolute left-0 top-8 -translate-y-1/2 bg-white p-2 rounded-full shadow-md z-10 text-brand-400">❮</button>
+                <div id="date-slider" class="flex overflow-x-auto no-scrollbar gap-3 px-10"></div>
+                <button onclick="document.getElementById('date-slider').scrollBy({left: 150, behavior: 'smooth'})" class="absolute right-0 top-8 -translate-y-1/2 bg-white p-2 rounded-full shadow-md z-10 text-brand-400">❯</button>
+            </div>
+            
+            <div id="time-list" class="grid grid-cols-2 gap-3 pb-32 overflow-y-auto content-start"></div>
+            
+            <div id="confirm-booking-container" class="absolute bottom-0 left-0 right-0 p-6 bg-brand-50">
+                <button id="btn-confirm-booking" onclick="submitBooking()" disabled class="w-full bg-gray-300 text-white font-bold py-4 rounded-full shadow-lg">Select a time</button>
+            </div>
+        </div>
+
+        <!-- VIEW 6: STYLIST/ADMIN DASHBOARD -->
+        <div id="view-management" class="view-section hidden px-6 pt-12 pb-20">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 id="mgmt-welcome" class="text-3xl font-bold text-gray-900">Dashboard</h2>
+                    <p class="text-brand-400 font-medium mt-1" id="mgmt-role"></p>
+                </div>
+                <button onclick="logout()" class="text-sm text-gray-400">Logout</button>
+            </div>
+            <div id="mgmt-block-section" class="hidden mb-8">
+                <button onclick="openStylistBlocker()" class="w-full py-4 bg-gray-900 text-white rounded-2xl shadow-md font-bold text-lg">📅 Open Calendar to Block Slots</button>
+            </div>
+
+            <div class="flex bg-gray-100 p-1 rounded-xl mb-6">
+                <button id="tab-today" onclick="setMgmtFilter('today')" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-gray-900 transition-all">Today</button>
+                <button id="tab-all" onclick="setMgmtFilter('all')" class="flex-1 py-2 text-sm font-bold rounded-lg text-gray-500 hover:text-gray-700 transition-all">All Upcoming</button>
+            </div>
+
+            <div id="mgmt-appointment-list" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
+    <script>
+        let currentUser = null; 
+        let selectedService = null; // NEW!
+        let selectedStylist = null; 
+        let selectedDate = null; 
+        let selectedTime = null; 
+        let currentActiveBookingId = null; 
+        let isBlockingMode = false;
+        let mgmtFilter = 'today';
+
+        window.onload = () => {
+            const savedMobile = localStorage.getItem('luxe_mobile');
+            if (savedMobile) attemptLogin(savedMobile, null, true); else showView('view-auth');
+        };
+
+        function showView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        // --- AUTHENTICATION ---
+        async function handleAuth() {
+            const phone = document.getElementById('auth-phone').value.trim();
+            const nameContainer = document.getElementById('auth-name-container');
+            const name = document.getElementById('auth-name').value.trim();
+            const pass = document.getElementById('auth-password').value.trim();
+            
+            if (!phone) return alert("Enter mobile number");
+
+            if (!nameContainer.classList.contains('hidden')) {
+                if (!name) return alert("Enter your name");
+                const res = await fetch('/api/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ mobile_number: phone, full_name: name }) });
+                completeLogin((await res.json()).user);
+            } else { attemptLogin(phone, pass, false); }
+        }
+
+        async function attemptLogin(phone, password, isAutoLogin) {
+            try {
+                const payload = { mobile_number: phone };
+                if (password) payload.password = password;
+                const res = await fetch('/api/auth', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                const data = await res.json();
+
+                if (data.status === 'exists') completeLogin(data.user);
+                else if (data.status === 'requires_password') {
+                    showView('view-auth');
+                    document.getElementById('auth-password-container').classList.remove('hidden');
+                    if (password) alert("Incorrect password.");
+                } else if (data.status === 'not_found' && !isAutoLogin) {
+                    showView('view-auth');
+                    document.getElementById('auth-name-container').classList.remove('hidden');
+                } else { showView('view-auth'); }
+            } catch (err) { showView('view-auth'); }
+        }
+
+        function completeLogin(userObj) {
+            currentUser = userObj;
+            localStorage.setItem('luxe_mobile', currentUser.mobile_number);
+            if (currentUser.role === 'client') loadClientDashboard(); else loadManagementDashboard();
+        }
+
+        function logout() { localStorage.removeItem('luxe_mobile'); location.reload(); }
+
+        // --- CLIENT DASHBOARD ---
+        async function loadClientDashboard() {
+            showView('view-client-dashboard');
+            document.getElementById('dash-welcome').innerText = `Welcome, ${currentUser.full_name.split(' ')[0]}!`;
+            const data = await (await fetch(`/api/dashboard/${currentUser.mobile_number}`)).json();
+            const card = document.getElementById('active-booking-card');
+            const btnBook = document.getElementById('btn-book-nav');
+
+            if (data.has_active_booking) {
+                const b = data.active_booking_details; currentActiveBookingId = b.id;
+                document.getElementById('active-date-time').innerText = `${formatDateUI(b.date)} • ${b.time}`;
+                document.getElementById('active-service').innerText = b.service_name; // NEW!
+                document.getElementById('active-stylist').innerText = b.stylist_name;
+                document.getElementById('active-status').innerText = b.status;
+                
+                const badge = document.getElementById('active-status');
+                badge.className = b.status === 'confirmed' ? "px-3 py-1 text-[10px] font-bold uppercase rounded-full bg-green-100 text-green-700" : "px-3 py-1 text-[10px] font-bold uppercase rounded-full bg-yellow-100 text-yellow-700";
+
+                card.classList.remove('hidden'); btnBook.classList.add('hidden');
+            } else { card.classList.add('hidden'); btnBook.classList.remove('hidden'); }
+        }
+
+        async function cancelAppointment() {
+            if(!confirm("Cancel appointment?")) return;
+            await fetch(`/api/appointment/${currentActiveBookingId}`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ mobile_number: currentUser.mobile_number }) });
+            loadClientDashboard();
+        }
+
+        // --- BOOKING FLOW: STEP 1 (SERVICES) ---
+        async function loadServicesForBooking() {
+            showView('view-services');
+            const services = await (await fetch('/api/services')).json();
+            const container = document.getElementById('service-list'); container.innerHTML = '';
+            
+            services.forEach(s => {
+                const div = document.createElement('div'); 
+                div.onclick = () => selectService(s);
+                div.className = "flex justify-between items-center bg-white p-5 rounded-3xl shadow-sm border border-gray-100 cursor-pointer hover:border-brand-400";
+                div.innerHTML = `
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">${s.name}</h3>
+                        <p class="text-sm text-brand-400 font-medium">${formatMinutes(s.duration_minutes)}</p>
+                    </div>
+                    <span class="text-gray-300">❯</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function formatMinutes(mins) {
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            if (h > 0 && m > 0) return `${h}h ${m}m`;
+            if (h > 0) return `${h}h`;
+            return `${m}m`;
+        }
+
+        function selectService(service) {
+            selectedService = service;
+            document.getElementById('stylist-service-label').innerText = `For: ${service.name} (${formatMinutes(service.duration_minutes)})`;
+            loadStylistsForBooking();
+        }
+
+        // --- BOOKING FLOW: STEP 2 (STYLISTS) ---
+        async function loadStylistsForBooking() {
+            showView('view-stylists');
+            const stylists = await (await fetch('/api/stylists')).json();
+            const container = document.getElementById('stylist-list'); container.innerHTML = '';
+            stylists.forEach(s => {
+                const div = document.createElement('div'); div.onclick = () => selectStylist(s);
+                div.className = "flex items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border cursor-pointer hover:border-brand-400";
+                div.innerHTML = `<img src="${s.image_url}" class="w-20 h-20 rounded-2xl object-cover bg-gray-100"><div><h3 class="text-xl font-bold">${s.name}</h3></div>`;
+                container.appendChild(div);
+            });
+        }
+
+        function selectStylist(stylist) {
+            isBlockingMode = false; selectedStylist = stylist;
+            document.getElementById('booking-stylist-name').innerText = `Booking ${selectedService.name} with ${stylist.name}`;
+            document.getElementById('confirm-booking-container').classList.remove('hidden');
+            document.getElementById('btn-back-calendar').onclick = () => showView('view-stylists');
+            
+            showView('view-booking'); generateDateSlider();
+        }
+
+        // --- STYLIST BLOCKING MODE ENTRY ---
+        function openStylistBlocker() {
+            isBlockingMode = true; 
+            selectedStylist = { id: currentUser.stylist_profile_id, name: "Calendar" };
+            document.getElementById('booking-stylist-name').innerText = "Click any time to block it.";
+            document.getElementById('confirm-booking-container').classList.add('hidden');
+            document.getElementById('btn-back-calendar').onclick = () => showView('view-management');
+            showView('view-booking'); generateDateSlider();
+        }
+
+        // --- BOOKING FLOW: STEP 3 (CALENDAR ENGINE) ---
+        function generateDateSlider() {
+            const slider = document.getElementById('date-slider'); slider.innerHTML = ''; const today = new Date();
+            for (let i = 0; i < 14; i++) {
+                let d = new Date(today); d.setDate(today.getDate() + i);
+                const dateString = d.toISOString().split('T')[0];
+                const btn = document.createElement('button');
+                btn.className = "flex-shrink-0 w-16 h-20 rounded-2xl border flex flex-col items-center justify-center gap-1 date-btn";
+                if (i===0) { btn.classList.add('bg-brand-400','text-white'); selectedDate = dateString; } else { btn.classList.add('bg-white','text-gray-500'); }
+                btn.innerHTML = `<span class="text-xs uppercase">${d.toLocaleDateString('en-US',{weekday:'short'})}</span><span class="text-xl font-bold">${d.getDate()}</span>`;
+                btn.onclick = () => {
+                    document.querySelectorAll('.date-btn').forEach(el => el.className="flex-shrink-0 w-16 h-20 rounded-2xl border flex flex-col items-center justify-center gap-1 date-btn bg-white text-gray-500");
+                    btn.classList.replace('bg-white','bg-brand-400'); btn.classList.replace('text-gray-500','text-white');
+                    selectedDate = dateString; selectedTime = null; if(!isBlockingMode) updateConfirmButton(); fetchAvailabilityAndRenderTimes();
+                };
+                slider.appendChild(btn);
+            }
+            fetchAvailabilityAndRenderTimes();
+        }
+
+        async function fetchAvailabilityAndRenderTimes() {
+            const tl = document.getElementById('time-list'); 
+            tl.innerHTML = '<p class="col-span-2 text-center text-sm">Loading...</p>';
+            
+            const data = await (await fetch(`/api/availability?stylist_id=${selectedStylist.id}&date=${selectedDate}`)).json();
+            const clientAppts = data.client_appointments; // Flat array of all occupied times
+            const manualBlocks = data.manual_blocks;
+            
+            tl.innerHTML = '';
+            const now = new Date();
+            const todayStr = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,'0') + "-" + String(now.getDate()).padStart(2,'0');
+            
+            // Generate all master time slots
+            const times = []; for(let h=10; h<=19; h++){ times.push(`${h}:00`); times.push(`${h}:30`); }
+
+            // NEW MATH: How many 30-min blocks does this service need? (Stylists only block 1 chunk at a time)
+            const blocksNeeded = isBlockingMode ? 1 : Math.ceil(selectedService.duration_minutes / 30);
+
+            times.forEach((t, index) => {
+                const [h, m] = t.split(':').map(Number);
+                let isPast = (selectedDate === todayStr) && (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes()));
+                let isClientAppt = clientAppts.includes(t);
+                let isManualBlock = manualBlocks.includes(t);
+                
+                const btn = document.createElement('button');
+
+                if (isBlockingMode) {
+                    // STYLIST VIEW (Doesn't need math, just shows what is blocked right now)
+                    if (isPast) {
+                        btn.className = "w-full py-4 rounded-2xl bg-gray-100 text-gray-400 font-bold border opacity-60 cursor-not-allowed";
+                        btn.disabled = true; btn.innerText = t;
+                    } else if (isClientAppt) {
+                        btn.className = "w-full py-4 rounded-2xl bg-red-50 text-red-400 font-bold border border-red-100 cursor-not-allowed opacity-80 flex flex-col items-center justify-center";
+                        btn.disabled = true; btn.innerHTML = `<span class="text-lg">${t}</span> <span class="text-[10px] uppercase mt-1">Client Booked</span>`;
+                    } else if (isManualBlock) {
+                        btn.className = "w-full py-4 rounded-2xl bg-gray-800 text-white font-bold cursor-pointer flex flex-col items-center justify-center shadow-md ring-2 ring-gray-800";
+                        btn.innerHTML = `<span class="text-lg">${t}</span> <span class="text-[10px] text-gray-300 uppercase mt-1">Blocked</span>`;
+                        btn.onclick = async () => { btn.innerHTML = `<span class="text-gray-400">...</span>`; await fetch('/api/stylist/slots/toggle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ mobile_number: currentUser.mobile_number, date: selectedDate, time: t }) }); fetchAvailabilityAndRenderTimes(); };
+                    } else {
+                        btn.className = "w-full py-4 rounded-2xl bg-white text-gray-800 font-bold border border-gray-200 hover:bg-gray-100 cursor-pointer flex items-center justify-center";
+                        btn.innerHTML = `<span class="text-lg">${t}</span>`;
+                        btn.onclick = async () => { btn.innerHTML = `<span class="text-gray-400">...</span>`; await fetch('/api/stylist/slots/toggle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ mobile_number: currentUser.mobile_number, date: selectedDate, time: t }) }); fetchAvailabilityAndRenderTimes(); };
+                    }
+                } else {
+                    // CLIENT VIEW (Requires Time Math)
+                    let canFitService = true;
+                    
+                    // Look ahead logic: Are all required slots available and not past 20:00?
+                    for (let i = 0; i < blocksNeeded; i++) {
+                        let futureIndex = index + i;
+                        if (futureIndex >= times.length) {
+                            canFitService = false; // Hits the end of the day
+                            break;
+                        }
+                        let futureTime = times[futureIndex];
+                        if (clientAppts.includes(futureTime) || manualBlocks.includes(futureTime)) {
+                            canFitService = false; // Hits another appointment
+                            break;
+                        }
+                    }
+
+                    if (isPast || !canFitService) {
+                        btn.className = "w-full py-4 rounded-2xl bg-gray-100 text-gray-400 font-bold border opacity-60 cursor-not-allowed flex items-center justify-center";
+                        btn.disabled = true; btn.innerHTML = `<span class="text-lg">${t}</span>`;
+                    } else {
+                        btn.className = "w-full py-4 rounded-2xl bg-brand-400 text-white font-bold time-btn shadow-sm transition-colors hover:bg-brand-100 hover:text-brand-500 flex items-center justify-center";
+                        btn.innerHTML = `<span class="text-lg">${t}</span>`;
+                        btn.onclick = () => {
+                            document.querySelectorAll('.time-btn').forEach(el => el.className="w-full py-4 rounded-2xl bg-brand-400 text-white font-bold time-btn transition-colors hover:bg-brand-100 hover:text-brand-500 flex items-center justify-center");
+                            btn.className = "w-full py-4 rounded-2xl bg-gray-900 text-white font-bold time-btn shadow-md ring-2 ring-offset-2 ring-gray-900 flex items-center justify-center";
+                            selectedTime = t; updateConfirmButton();
+                        };
+                    }
+                }
+                tl.appendChild(btn);
+            });
+        }
+
+        function updateConfirmButton() {
+            const btn = document.getElementById('btn-confirm-booking');
+            if (selectedTime) { btn.disabled = false; btn.className = "w-full bg-gray-900 text-white font-bold py-4 rounded-full"; btn.innerText = `Confirm • ${selectedTime}`; } 
+            else { btn.disabled = true; btn.className = "w-full bg-gray-300 text-white font-bold py-4 rounded-full"; btn.innerText = `Select a time`; }
+        }
+
+        async function submitBooking() {
+            const btn = document.getElementById('btn-confirm-booking'); btn.innerText = "Booking..."; btn.disabled = true;
+            
+            // Sending Service ID to backend!
+            const payload = { 
+                mobile_number: currentUser.mobile_number, 
+                stylist_id: selectedStylist.id, 
+                service_id: selectedService.id, 
+                date: selectedDate, 
+                time: selectedTime 
+            };
+
+            const res = await fetch('/api/book', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            const data = await res.json();
+            
+            if (data.status === 'success') { selectedDate = null; selectedTime = null; loadClientDashboard(); } 
+            else { alert(data.error); btn.innerText = `Confirm • ${selectedTime}`; btn.disabled = false; }
+        }
+
+        // --- STYLIST / ADMIN DASHBOARD ---
+        function setMgmtFilter(filterType) { mgmtFilter = filterType; loadManagementDashboard(); }
+
+        async function loadManagementDashboard() {
+            showView('view-management');
+            document.getElementById('mgmt-welcome').innerText = "Welcome, " + currentUser.full_name.split(' ')[0] + "!";
+            document.getElementById('mgmt-role').innerText = currentUser.role.toUpperCase() + ' DASHBOARD';
+            if(currentUser.role === 'stylist') document.getElementById('mgmt-block-section').classList.remove('hidden');
+
+            document.getElementById('tab-today').className = mgmtFilter === 'today' ? "flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-gray-900" : "flex-1 py-2 text-sm font-bold rounded-lg text-gray-500 hover:text-gray-700";
+            document.getElementById('tab-all').className = mgmtFilter === 'all' ? "flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-gray-900" : "flex-1 py-2 text-sm font-bold rounded-lg text-gray-500 hover:text-gray-700";
+
+            const appts = await (await fetch(`/api/management/appointments?mobile_number=${currentUser.mobile_number}&filter=${mgmtFilter}`)).json();
+            const container = document.getElementById('mgmt-appointment-list'); container.innerHTML = '';
+            
+            if(appts.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-4 bg-white rounded-2xl">No appointments.</p>`; return; }
+
+            appts.forEach(a => {
+                const div = document.createElement('div'); div.className = "bg-white p-5 rounded-3xl border shadow-sm mb-4";
+                const btns = a.status === 'pending' 
+                    ? `<button onclick="mgmtConfirm(${a.id})" class="text-green-600 bg-green-50 px-4 py-2 rounded-xl text-sm font-bold mr-2">Confirm</button><button onclick="mgmtReject(${a.id})" class="text-red-600 bg-red-50 px-4 py-2 rounded-xl text-sm font-bold">Reject</button>`
+                    : `<button onclick="mgmtReject(${a.id})" class="w-full mt-2 py-2 bg-gray-50 text-red-500 rounded-xl text-sm font-bold hover:bg-red-50">Cancel Booking</button>`;
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="text-xs text-brand-400 font-bold mb-1 uppercase tracking-wide">${formatDateUI(a.date)} • ${a.time}</p>
+                            <h4 class="text-lg font-bold text-gray-900">${a.client_name}</h4>
+                            <p class="text-sm text-gray-500 mb-1">${a.client_mobile}</p>
+                            <p class="text-sm font-bold text-gray-800 bg-gray-50 inline-block px-2 py-1 rounded">💅 ${a.service_name}</p>
+                        </div>
+                        <span class="px-3 py-1 text-[10px] font-bold uppercase rounded-full ${a.status==='confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${a.status}</span>
+                    </div>
+                    <div class="pt-3 border-t border-gray-50">${btns}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function mgmtConfirm(id) { await fetch(`/api/appointment/${id}/confirm`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ mobile_number: currentUser.mobile_number }) }); loadManagementDashboard(); }
+        async function mgmtReject(id) { if(confirm("Delete this appointment?")) { await fetch(`/api/appointment/${id}`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ mobile_number: currentUser.mobile_number }) }); loadManagementDashboard(); } }
+        function formatDateUI(dateString) { return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+    </script>
+</body>
+</html>
